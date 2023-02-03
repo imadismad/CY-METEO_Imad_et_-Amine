@@ -18,7 +18,9 @@ typedef struct chaineh{
 
 // structure du noeud
 typedef struct noeudh{
-	Donneeh val;
+	int idstation;
+    double altitudes;
+    double lat, lon;
 	struct noeudh *fg;
 	struct noeudh *fd;
 	int equilibre;
@@ -50,6 +52,7 @@ ABRh* insertionABRh(ABRh* a, Donneeh e);
 void parcoursInfixeABRh(ABRh* a, FILE* f);
 void supprabrh( ABRh* a);
 int h(FILE* fe, char tab[], FILE* fo, int r);
+
 typedef struct donneem{
         int idstation;
         int date;
@@ -180,8 +183,8 @@ typedef struct donnee2{
 typedef struct chaine2{
     int date;
     int heure;
-    int compteur;
-    int somme;
+    double compteur;
+    double somme;
     struct chaine2* suivant;
 }Chaine2;
 
@@ -365,22 +368,23 @@ typedef struct donneep1{
         int date;
         int heure;
         int decalage;
-        double val, valmin, valmax;
+        double val, var;
     } Donneep1;
 
 
 //structure liste chainée
 typedef struct chainep1{
     int station;
-    double min, max;
+    double val, var;
     double compteur;
-    double somme;
     struct chainep1* suivant;
 }Chainep1;
 
 // structure du noeud
 typedef struct noeudp1{
-	Donneep1 val;
+	double val;
+    double var;
+    int idstation;
     double compteur;
 	struct noeudp1 *fg;
 	struct noeudp1 *fd;
@@ -389,7 +393,8 @@ typedef struct noeudp1{
 
 
 typedef struct abrp1{
-    Donneep1 elmt;
+    int idstation;
+    double var, val;
     double compteur;
     struct abrp1* fg, *fd;
 }ABRp1;

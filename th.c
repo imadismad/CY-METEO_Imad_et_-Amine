@@ -46,24 +46,27 @@ int max2(int a,int b, int c){
 		return c;
 	}
 }
-//fonction de creation de chainon
+//créer le premier chainon de la liste chainée
 Chaineh* creerchainonh(Donneeh b){
     Chaineh* a=malloc(sizeof(Chaineh));
     a->elmt.idstation=b.idstation;
-    a->elmt.altitudes=b.altitudes;
-    a->elmt.lat=b.lat;
     a->elmt.lon=b.lon;
+    a->elmt.lat=b.lat;
+    a->elmt.altitudes=b.altitudes;
+	a->elmt.date=b.date;
+	a->elmt.heure=b.heure;
+	a->elmt.decalage=b.decalage;
     a->suivant=NULL;
     return a;
 }
-//fonction d'ajout d'un chainon dans une chaine
+//ajouter les éléments dans la liste chainée
 Chaineh* ajouterCroissanth(Chaineh *pliste, Donneeh b){
-    Chaineh *nouveau=creerchainonh(b);
+	Chaineh *nouveau=creerchainonh(b);
 	Chaineh *p1 =pliste;
 	if(pliste==NULL){// si la liste est vide
 		pliste=nouveau;
 	}
-	else if (pliste->elmt.altitudes < b.altitudes){ // dans ce cas il faut placer l'element au début
+	else if (pliste->elmt.altitudes < b.altitudes) { // dans ce cas il faut placer l'element au début
 		nouveau->suivant=pliste;
         pliste=nouveau;
 	}
@@ -75,9 +78,6 @@ Chaineh* ajouterCroissanth(Chaineh *pliste, Donneeh b){
 		if(p1->suivant==NULL){ // s'il faut placer le nouvel élément en fin de chaîne
 			p1->suivant=nouveau;
 		}
-        else if(p1->suivant->elmt.altitudes == b.altitudes){
-            return pliste;
-        }
 		else{ // il faut inserer le maillon en millieu de chaîne, après p1
 			nouveau->suivant=p1->suivant;
 			p1->suivant = nouveau;
@@ -85,34 +85,51 @@ Chaineh* ajouterCroissanth(Chaineh *pliste, Donneeh b){
 	}
 	return pliste;
 }
-//Parcours de l'arbre et ecriture dans le fichier de sortie
+//parcours de l'avl et ecriture dans le fichier de sortie
 void parcoursInfixeh(Noeudh* a, FILE* f){
     if(a!=NULL){
         parcoursInfixeh(a->fg, f);
-    	fprintf(f, "%d;%lf;%lf;%lf\n",a->val.idstation, a->val.lat, a->val.lon, a->val.altitudes);
+		fprintf(f, "%d;%lf;%lf;%lf\n",a->idstation,a->lat , a->lon, a->altitudes);
         parcoursInfixeh(a->fd, f);
 	}
 }
 //suppression de l'avl
 void suppravlh( Noeudh* a){
-    if(a->fd!=NULL){
+    if(a->fd!=NULL)
         suppravlh(a->fd);
-	}
-    if(a->fg!=NULL){
+    if(a->fg!=NULL)
         suppravlh(a->fg);
-	}
     free(a);
 }
 //fonction qui cree un nouveau noeud
 Noeudh* nouveaunoeudh(Donneeh val){
-	Noeudh*  noeud= malloc(sizeof(Noeudh));
-	noeud->val.lat = val.lat;
-    noeud->val.lon = val.lon;
-    noeud->val.altitudes = val.altitudes;
+	Noeudh* noeud= NULL;
+	noeud=(Noeudh*) malloc(sizeof(Noeudh));
+	if(noeud==NULL){
+		return NULL;
+	}
+	noeud->altitudes = val.altitudes;
 	noeud->fg = NULL;
 	noeud->fd = NULL;
-	noeud->equilibre = 0; 
+	noeud->lon = val.lon;
+	noeud->lat = val.lat;
+	noeud->idstation=val.idstation;
+    noeud->equilibre = 0; 
 	return noeud;
+}
+//fonction pour effectuer la rotation droite
+Noeudh* rotationDroiteh(Noeudh* a){
+	Noeudh* pivot;
+	int eq_a, eq_p;
+	pivot=a->fg;
+	a->fg=pivot->fd;
+	pivot->fd=a;
+	eq_a=a->equilibre;
+	eq_p=pivot->equilibre;
+	a->equilibre= eq_a - min(eq_p, 0) +1;
+	pivot->equilibre=max2( eq_a+2, eq_a+eq_p+2, eq_p+1);
+	a=pivot;
+	return a;
 }
 //fonction pour effectuer la rotation gauche
 Noeudh* rotationGaucheh(Noeudh* a){
@@ -128,26 +145,11 @@ Noeudh* rotationGaucheh(Noeudh* a){
 	a=pivot;
 	return a;
 }
-//fonction pour effectuer la rotation droite
-Noeudh* rotationDroiteh(Noeudh* a){
-	Noeudh* pivot;
-	int eq_a, eq_p;
-	pivot=a->fg;
-	a->fg=pivot->fd;
-	pivot->fd=a;
-	eq_a=a->equilibre;
-	eq_p=pivot->equilibre;
-	a->equilibre= eq_a - min(eq_p, 0) +1;
-	pivot->equilibre=max2( eq_a-2, eq_a+eq_p-2, eq_p-1);
-	a=pivot;
-	return a;
-}
 //fonction pour effectuer une double rotation droite
 Noeudh* doubleRotationDroiteh(Noeudh* a){
 	a->fg= rotationGaucheh(a->fg);
 	return rotationDroiteh(a);
 }
-
 //fonction pour effectuer une double rotation gauche
 Noeudh* doubleRotationGaucheh(Noeudh* a){
 	a->fd= rotationDroiteh(a->fd);
@@ -173,17 +175,18 @@ Noeudh* equilibrerAVLh(Noeudh* a){
 	}
 	return a;
 }
-// fonction pour inserer un nouvel element, et qui renvoie un pointeur vers la racine
+// fonction recursive pour inserer un nouvel element, et qui renvoie un pointeur vers la racine
 Noeudh* inserth(Noeudh* a, Donneeh e, int* h){
+
 	if(a==NULL){
 		*h=1;
 		return nouveaunoeudh(e);
 	}
-	else if(e.altitudes<a->val.altitudes){
+	else if(e.altitudes>a->altitudes){
 		a->fg=inserth(a->fg,e,h);
-		*h= - *h;
+		*h= -*h;
 	}
-	else if(e.altitudes>a->val.altitudes){
+	else if(e.altitudes<a->altitudes){
 		a->fd=inserth(a->fd,e,h);
 	}
 	else{
@@ -205,24 +208,22 @@ Noeudh* inserth(Noeudh* a, Donneeh e, int* h){
 //creation d'un noeud de l'abr
 ABRh* creerArbreh(Donneeh e){
     ABRh* a=malloc(sizeof(ABRh));
-	a->elmt.lat = e.lat;
-    a->elmt.lon = e.lon;
-    a->elmt.altitudes = e.altitudes;
+    a->elmt.idstation=e.idstation;
+    a->elmt.lon= e.lon;
+    a->elmt.lat= e.lat;
+    a->elmt.altitudes= e.altitudes;
     a->fd=NULL;
     a->fg=NULL;
     return a;
 }
 //insertion des elements dans l'abr
 ABRh* insertionABRh(ABRh* a, Donneeh e){
-    if(a==NULL){
+    if(a==NULL)
         return creerArbreh(e); 
-	}
-    else if(e.altitudes<a->elmt.altitudes){
+    else if(e.altitudes>a->elmt.altitudes) 
         a->fg= insertionABRh(a->fg, e);
-	}
-    else if(e.altitudes>a->elmt.altitudes){
+    else if(e.altitudes<a->elmt.altitudes)
         a->fd= insertionABRh(a->fd, e);
-	}
     else{
 		return a;
     }
@@ -230,30 +231,28 @@ ABRh* insertionABRh(ABRh* a, Donneeh e){
 }
 //parcours de l'abr et ecriture dans le fichier de sortie
 void parcoursInfixeABRh(ABRh* a, FILE* f){
-    if(a->fg!=NULL){
+    if(a!=NULL){
         parcoursInfixeABRh(a->fg, f);
-    	fprintf(f, "%d;%lf;%lf;%lf\n",a->elmt.idstation, a->elmt.lat, a->elmt.lon, a->elmt.altitudes);
+    	fprintf(f, "%d;%lf;%lf;%lf\n",a->elmt.idstation,a->elmt.lat , a->elmt.lon, a->elmt.altitudes);
         parcoursInfixeABRh(a->fd, f);
 	}
 }
-//suppression de l'abr 
+//suppression de l'abr
 void supprabrh( ABRh* a){
-    if(a->fd!=NULL){
+    if(a->fd!=NULL)
         supprabrh(a->fd);
-	}
-    if(a->fg!=NULL){
+    if(a->fg!=NULL)
         supprabrh(a->fg);
-	}
     free(a);
 }
 //fonction pour le mode h
 int h(FILE* fe, char tab[], FILE* fo, int r){ 
     Donneeh b;
     FILE* f1=NULL;
-    int* h;
+    int* h=NULL;
 	Chaineh* a=NULL, *c;
-	Noeudh* a2=NULL;
 	ABRh* a3=NULL;
+	int i=1;
     if(strcmp(tab,"tab")==0){
         while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%lf;%lf;%d\n",&(b.date), &(b.heure),&(b.decalage),&(b.lat), &(b.lon), &(b.altitudes),&(b.idstation)) != EOF){
 			//on ajoute les elements un à un dans la chaine pointée par a
@@ -269,8 +268,11 @@ int h(FILE* fe, char tab[], FILE* fo, int r){
         return 0;   
     }
     else if(strcmp(tab,"avl")==0){ 
-        while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%lf;%lf;%d\n",&(b.date), &(b.heure),&(b.decalage),&(b.lat), &(b.lon), &(b.altitudes),&(b.idstation)) != EOF){
+		Noeudh* a2=NULL;
+        while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%lf;%lf;%d",&(b.date), &(b.heure),&(b.decalage),&(b.lat), &(b.lon), &(b.altitudes),&(b.idstation)) != EOF){
 			//on ajoute les elements un à un dans la chaine pointée par a
+			printf("%d\n", i);
+			i=i+1;
 			a2=inserth(a2, b, h);
         }
         //ecriture dans le fichier de sortie et parcours de l'avl
@@ -376,15 +378,15 @@ void suppravlm( Noeudm* a){
 }
 //fonction qui cree un nouveau noeud
 Noeudm* nouveaunoeudm(Donneem val){
-	Noeudm*  noeud= malloc(sizeof(Noeudm));
-	noeud->val.idstation = val.idstation;
-    noeud->val.humidite= val.humidite;
-    noeud->val.lat = val.lat;
-    noeud->val.lon = val.lon;
-	noeud->fg = NULL;
-	noeud->fd = NULL;
-	noeud->equilibre = 0; 
-	return noeud;
+	Noeudm* a= malloc(sizeof(Noeudm));
+	a->val.idstation = val.idstation;
+    a->val.humidite= val.humidite;
+    a->val.lat = val.lat;
+    a->val.lon = val.lon;
+	a->fg = NULL;
+	a->fd = NULL;
+	a->equilibre = 0; 
+	return a;
 }
 //fonction pour effectuer la rotation gauche
 Noeudm* rotationGauchem(Noeudm* a){
@@ -454,11 +456,11 @@ Noeudm* insertm(Noeudm* a, Donneem e, int* h){
 		*h=1;
 		return nouveaunoeudm(e);
 	}
-	else if(e.humidite<a->val.humidite){
+	else if(e.humidite > a->val.humidite){
 		a->fg=insertm(a->fg,e,h);
 		*h= - *h;
 	}
-	else if(e.humidite>a->val.humidite){
+	else if(e.humidite < a->val.humidite){
 		a->fd=insertm(a->fd,e,h);
 	}
 	else{
@@ -503,7 +505,7 @@ ABRm* insertionABRm(ABRm* a, Donneem e){
 }
 //parcours de l'abr et ecriture dans le fichier de sortie
 void parcoursInfixeABRm(ABRm* a, FILE* f){
-    if(a->fg!=NULL){
+    if(a!=NULL){
         parcoursInfixeABRm(a->fg, f);
     	fprintf(f, "%d;%lf;%lf;%lf\n",a->elmt.idstation, a->elmt.lat, a->elmt.lon, a->elmt.humidite);
         parcoursInfixeABRm(a->fd, f);
@@ -939,23 +941,23 @@ Chaine2* ajouterCroissant2(Chaine2 *pliste, Donnee2 b){
 	if(pliste==NULL){// si la liste est vide
 		pliste=nouveau;
 	}
-	else if ((pliste->date)*10+(pliste->heure) > (b.date)*10+(b.heure)) { // dans ce cas il faut placer l'element au début
+	else if ((pliste->date)*100+(pliste->heure) > (b.date)*100+(b.heure)) { // dans ce cas il faut placer l'element au début
 		nouveau->suivant=pliste;
         pliste=nouveau;
 	}
-    else if ((pliste->date)*10+(pliste->heure) == (b.date)*10+(b.heure)) { // dans ce cas il faut placer l'element au début
+    else if ((pliste->date)*100+(pliste->heure) == (b.date)*100+(b.heure)) { // dans ce cas il faut placer l'element au début
 		pliste->compteur=pliste->compteur +1;
         pliste->somme=pliste->somme + b.val;
 	}
 	else{
 		//on parcours la liste jusqu'à trouver où doit aller le nouveau élément
-		while(p1->suivant!= NULL && (p1->suivant->date)*10+(p1->suivant->heure) < (b.date)*10+(b.heure)){ 
+		while(p1->suivant!= NULL && (p1->suivant->date)*100+(p1->suivant->heure) < (b.date)*100+(b.heure)){ 
 			p1=p1->suivant;
 		}
 		if(p1->suivant==NULL){ // s'il faut placer le nouvel élément en fin de chaîne
 			p1->suivant=nouveau;
 		}
-        else if ((p1->suivant->date)*10+(p1->suivant->heure) == (b.date)*10+(b.heure)){//quand l'heure est deja enregistree
+        else if ((p1->suivant->date)*100+(p1->suivant->heure) == (b.date)*100+(b.heure)){//quand l'heure est deja enregistree
             p1->suivant->compteur=p1->suivant->compteur +1;
             p1->suivant->somme=p1->suivant->somme + b.val;
         }
@@ -973,23 +975,23 @@ Chaine2* ajouterCroissant2r(Chaine2 *pliste, Donnee2 b){
 	if(pliste==NULL){// si la liste est vide
 		pliste=nouveau;
 	}
-	else if ((pliste->date)*10+(pliste->heure) < (b.date)*10+(b.heure)) { // dans ce cas il faut placer l'element au début
+	else if ((pliste->date)*100+(pliste->heure) < (b.date)*100+(b.heure)) { // dans ce cas il faut placer l'element au début
 		nouveau->suivant=pliste;
         pliste=nouveau;
 	}
-    else if ((pliste->date)*10+(pliste->heure) == (b.date)*10+(b.heure)) { // dans ce cas il faut placer l'element au début
+    else if ((pliste->date)*100+(pliste->heure) == (b.date)*100+(b.heure)) { // dans ce cas il faut placer l'element au début
 		pliste->compteur=pliste->compteur +1;
         pliste->somme=pliste->somme + b.val;
 	}
 	else{
 		//on parcours la liste jusqu'à trouver où doit aller le nouveau élément
-		while(p1->suivant!= NULL && (p1->suivant->date)*10+(p1->suivant->heure) > (b.date)*10+(b.heure)){ 
+		while(p1->suivant!= NULL && (p1->suivant->date)*100+(p1->suivant->heure) > (b.date)*100+(b.heure)){ 
 			p1=p1->suivant;
 		}
 		if(p1->suivant==NULL){ // s'il faut placer le nouvel élément en fin de chaîne
 			p1->suivant=nouveau;
 		}
-        else if ((p1->suivant->date)*10+(p1->suivant->heure) == (b.date)*10+(b.heure)){//quand l'heure est deja enregistree
+        else if ((p1->suivant->date)*100+(p1->suivant->heure) == (b.date)*100+(b.heure)){//quand l'heure est deja enregistree
             p1->suivant->compteur=p1->suivant->compteur +1;
             p1->suivant->somme=p1->suivant->somme + b.val;
         }
@@ -1105,11 +1107,11 @@ Noeud2* insert2(Noeud2* a, Donnee2 e, int* h){
 		*h=1;
 		return nouveaunoeud2(e);
 	}
-	else if((a->date)*10+(a->heure) > (e.date)*10+(e.heure)){
+	else if((a->date)*100+(a->heure) > (e.date)*100+(e.heure)){
 		a->fg=insert2(a->fg,e,h);
 		*h=-*h;
 	}
-	else if((a->date)*10+(a->heure) < (e.date)*10+(e.heure)){
+	else if((a->date)*100+(a->heure) < (e.date)*100+(e.heure)){
 		a->fd=insert2(a->fd,e,h);
 	}
 	else{
@@ -1145,9 +1147,9 @@ ABR2* creerArbre2(Donnee2 e){
 ABR2* insertionABR2(ABR2* a, Donnee2 e){
     if(a==NULL)
         return creerArbre2(e); 
-    else if((a->date)*10+(a->heure) > (e.date)*10+(e.heure)) 
+    else if((a->date)*100+(a->heure) > (e.date)*100+(e.heure)) 
         a->fg= insertionABR2(a->fg, e);
-    else if((a->date)*10+(a->heure) < (e.date)*10+(e.heure))
+    else if((a->date)*100+(a->heure) < (e.date)*100+(e.heure))
         a->fd= insertionABR2(a->fd, e);
     else{
 		a->compteur=a->compteur+1;
@@ -1159,9 +1161,9 @@ ABR2* insertionABR2(ABR2* a, Donnee2 e){
 ABR2* insertionABR2r(ABR2* a, Donnee2 e){
     if(a==NULL)
         return creerArbre2(e); 
-    else if((a->date)*10+(a->heure) < (e.date)*10+(e.heure)) 
+    else if((a->date)*100+(a->heure) < (e.date)*100+(e.heure)) 
         a->fg= insertionABR2r(a->fg, e);
-    else if((a->date)*10+(a->heure) > (e.date)*10+(e.heure))
+    else if((a->date)*100+(a->heure) > (e.date)*100+(e.heure))
         a->fd= insertionABR2r(a->fd, e);
     else{
 		a->compteur=a->compteur+1;
@@ -1284,13 +1286,13 @@ Chaine31* ajouterCroissant31(Chaine31 *pliste, Donnee3 b){
 	if(pliste==NULL){// si la liste est vide
 		pliste=nouveau;
 	}
-	else if ((pliste->date)*10+(pliste->heure) > (b.date)*10+(b.heure)) { // dans ce cas il faut placer l'element au début
+	else if ((pliste->date)*100+(pliste->heure) > (b.date)*100+(b.heure)) { // dans ce cas il faut placer l'element au début
 		nouveau->suivant=pliste;
         pliste=nouveau;
 	}
 	else{
 		//on parcours la liste jusqu'à trouver où doit aller le nouveau élément
-		while(p1->suivant!= NULL && (p1->suivant->date)*10+(p1->suivant->heure) < (b.date)*10+(b.heure)){ 
+		while(p1->suivant!= NULL && (p1->suivant->date)*100+(p1->suivant->heure) < (b.date)*100+(b.heure)){ 
 			p1=p1->suivant;
 		}
 		if(p1->suivant==NULL){ // s'il faut placer le nouvel élément en fin de chaîne
@@ -1339,13 +1341,13 @@ Chaine31* ajouterCroissant31r(Chaine31 *pliste, Donnee3 b){
 	if(pliste==NULL){// si la liste est vide
 		pliste=nouveau;
 	}
-	else if ((pliste->date)*10+(pliste->heure) < (b.date)*10+(b.heure)) { // dans ce cas il faut placer l'element au début
+	else if ((pliste->date)*100+(pliste->heure) < (b.date)*100+(b.heure)) { // dans ce cas il faut placer l'element au début
 		nouveau->suivant=pliste;
         pliste=nouveau;
 	}
 	else{
 		//on parcours la liste jusqu'à trouver où doit aller le nouveau élément
-		while(p1->suivant!= NULL && (p1->suivant->date)*10+(p1->suivant->heure) > (b.date)*10+(b.heure)){ 
+		while(p1->suivant!= NULL && (p1->suivant->date)*100+(p1->suivant->heure) > (b.date)*100+(b.heure)){ 
 			p1=p1->suivant;
 		}
 		if(p1->suivant==NULL){ // s'il faut placer le nouvel élément en fin de chaîne
@@ -1395,7 +1397,7 @@ void parcoursInfixe3(Noeud3* a, FILE* f){
             parcoursInfixe3(a->fg, f);
             while(a->chaine!=NULL){
                 fonction_date3(a->chaine->date, z);
-                fprintf(f,"%d;%s;%d;%lf\n",a->idstation, z, a->chaine->heure, a->chaine->val);
+                fprintf(f,"%d;%s;%d:00:00;%lf\n",a->idstation, z, a->chaine->heure, a->chaine->val);
                 c=a->chaine;
                 a->chaine=a->chaine->suivant;
                 free(c);
@@ -1431,7 +1433,7 @@ Noeud3* rotationGauche3(Noeud3* a){
 	eq_a=a->equilibre;
 	eq_p=pivot->equilibre;
 	a->equilibre= eq_a - max(eq_p, 0) -1;
-	pivot->equilibre=min2( eq_a-2, eq_a+eq_p-2, eq_p-1);
+	pivot->equilibre=min2( eq_a - 2, eq_a + eq_p-2, eq_p - 1);
 	a=pivot;
 	return a;
 }
@@ -1609,6 +1611,7 @@ int mode3(FILE* fe, char tab[], FILE* fo, int r){
 	Noeud3* a2=NULL;
 	ABR3* a3=NULL;
 	char z[10];
+	rewind(fe);
     if(strcmp(tab,"tab")==0){
         while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%d\n",&(b.date),&(b.heure),&(b.decalage),&(b.val),&(b.idstation))!=EOF){
 			//on ajoute les elements un à un dans la chaine pointée par a
@@ -1632,7 +1635,7 @@ int mode3(FILE* fe, char tab[], FILE* fo, int r){
         return 0;
     }
     else if(strcmp(tab,"avl")==0){
-        while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%d\n",&(b.date), &(b.heure), &(b.decalage),&(b.val),&(b.idstation))!=EOF){
+        while((fscanf(fe,"%dT%d:00:00+%d:00;%lf;%d\n",&(b.date),&(b.heure),&(b.decalage),&(b.val),&(b.idstation)))!=EOF){
 			//on ajoute les elements un à un dans la chaine pointée par a
 			if(r==0)
 				a2=insert3(a2, b, h);
@@ -2002,12 +2005,12 @@ int w(FILE* fe, char tab[], FILE* fo, int r){
     return 1;
 }
 //créer le premier chainon de la liste chainée
+//créer le premier chainon de la liste chainée
 Chainep1* creerchainonp1(Donneep1 b){
     Chainep1* a=malloc(sizeof(Chainep1));
     a->station=b.idstation;
-    a->min=b.valmin;
-    a->max=b.valmax;
-    a->somme=b.val;
+    a->val=b.val;
+    a->var=b.var;
     a->compteur=1;
     a->suivant=NULL;
     return a;
@@ -2033,11 +2036,8 @@ Chainep1* ajouterCroissantp1(Chainep1 *pliste, Donneep1 b){
 		}
         else if (p1->suivant->station == b.idstation){//quand la station est deja enregistree
             p1->suivant->compteur=p1->suivant->compteur +1;
-            p1->suivant->somme=p1->suivant->somme + b.val;
-            if(b.valmax > p1->suivant->max)
-                p1->suivant->max=b.valmax;
-            if(b.valmin < p1->suivant->min)
-                p1->suivant->min=b.valmin;
+            p1->suivant->val=p1->suivant->val + b.val;
+			p1->suivant->var=p1->suivant->var + b.var;
         }
 		else{ // il faut inserer le maillon en millieu de chaîne, après p1
 			nouveau->suivant=p1->suivant;
@@ -2067,11 +2067,8 @@ Chainep1* ajouterCroissantp1r(Chainep1 *pliste, Donneep1 b){
 		}
         else if (p1->suivant->station == b.idstation){//quand la station est deja enregistree
             p1->suivant->compteur=p1->suivant->compteur +1;
-            p1->suivant->somme=p1->suivant->somme + b.val;
-            if(b.valmax > p1->suivant->max)
-                p1->suivant->max=b.valmax;
-            if(b.valmin < p1->suivant->min)
-                p1->suivant->min=b.valmin;
+            p1->suivant->val=p1->suivant->val + b.val;
+			p1->suivant->var=p1->suivant->var + b.var;
         }
 		else{ // il faut inserer le maillon en millieu de chaîne, après p1
 			nouveau->suivant=p1->suivant;
@@ -2084,7 +2081,7 @@ Chainep1* ajouterCroissantp1r(Chainep1 *pliste, Donneep1 b){
 void parcoursInfixep1(Noeudp1* a, FILE* f){
     if(a!=NULL){
         parcoursInfixep1(a->fg, f);
-		fprintf(f, "%d;%lf;%lf;%lf\n",a->val.idstation,((a->val.val)/(a->compteur)) , a->val.valmin, a->val.valmax);
+		fprintf(f, "%d;%lf;%lf\n",a->idstation,((a->val)/(a->compteur)), ((a->var)/(a->compteur)));
         parcoursInfixep1(a->fd, f);
 	}
 }
@@ -2093,7 +2090,7 @@ void parcoursInfixep1r(Noeudp1* a, FILE* f){
 
     if(a!=NULL){
         parcoursInfixep1r(a->fd, f);
-		fprintf(f, "%d;%lf;%lf;%lf\n",a->val.idstation,((a->val.val)/(a->compteur)) , a->val.valmin, a->val.valmax);
+		fprintf(f, "%d;%lf;%lf\n",a->idstation,((a->val)/(a->compteur)), ((a->var)/(a->compteur)));
         parcoursInfixep1r(a->fg, f);
 	}
 }
@@ -2108,7 +2105,9 @@ void suppravlp1( Noeudp1* a){
 //fonction qui cree un nouveau noeud
 Noeudp1* nouveaunoeudp1(Donneep1 val){
 	Noeudp1*  noeud= malloc(sizeof(Noeudp1));
-	noeud->val = val;
+	noeud->val = val.val;
+	noeud->var = val.var;
+	noeud->idstation = val.idstation;
 	noeud->fg = NULL;
 	noeud->fd = NULL;
 	noeud->equilibre = 1;
@@ -2179,21 +2178,18 @@ Noeudp1* insertp1(Noeudp1* a, Donneep1 e, int* h){
 		*h=1;
 		return nouveaunoeudp1(e);
 	}
-	else if(e.idstation<a->val.idstation){
+	else if(e.idstation<a->idstation){
 		a->fg=insertp1(a->fg,e,h);
 		*h= -*h;
 	}
-	else if(e.idstation>a->val.idstation){
+	else if(e.idstation>a->idstation){
 		a->fd=insertp1(a->fd,e,h);
 	}
 	else{
 		*h=0;
-        a->val.val=a->val.val + e.val;
+        a->val=a->val + e.val;
+		a->var=a->var + e.var;
         a->compteur=a->compteur + 1;
-        if(a->val.valmin>e.valmin)
-            a->val.valmin=e.valmin;
-        if(a->val.valmax<e.valmax)
-            a->val.valmax=e.valmax;
 		return a;
 	}
 	if(*h!=0){
@@ -2211,10 +2207,9 @@ Noeudp1* insertp1(Noeudp1* a, Donneep1 e, int* h){
 //creation d'un noeud de l'abr
 ABRp1* creerArbrep1(Donneep1 e){
     ABRp1* a=malloc(sizeof(ABR1));
-    a->elmt.idstation=e.idstation;
-    a->elmt.val= e.val;
-    a->elmt.valmin= e.valmin;
-    a->elmt.valmax= e.valmax;
+    a->idstation=e.idstation;
+    a->val= e.val;
+    a->var= e.var;
 	a->compteur=1;
     a->fd=NULL;
     a->fg=NULL;
@@ -2224,17 +2219,14 @@ ABRp1* creerArbrep1(Donneep1 e){
 ABRp1* insertionABRp1(ABRp1* a, Donneep1 e){
     if(a==NULL)
         return creerArbrep1(e); 
-    else if(e.idstation<a->elmt.idstation) 
+    else if(e.idstation<a->idstation) 
         a->fg= insertionABRp1(a->fg, e);
-    else if(e.idstation>a->elmt.idstation)
+    else if(e.idstation>a->idstation)
         a->fd= insertionABRp1(a->fd, e);
     else{
 		a->compteur=a->compteur +1;
-		a->elmt.val=a->elmt.val + e.val;
-		if(a->elmt.valmin > e.valmin)
-			a->elmt.valmin= e.valmin;
-		if(a->elmt.valmax < e.valmax)
-			a->elmt.valmax= e.valmax;
+		a->val=a->val + e.val;
+		a->var=a->var + e.var;
     }
     return a;
 }
@@ -2242,17 +2234,14 @@ ABRp1* insertionABRp1(ABRp1* a, Donneep1 e){
 ABRp1* insertionABRp1r(ABRp1* a, Donneep1 e){
     if(a==NULL)
         return creerArbrep1(e); 
-    else if(e.idstation>a->elmt.idstation) 
+    else if(e.idstation>a->idstation) 
         a->fg= insertionABRp1(a->fg, e);
-    else if(e.idstation<a->elmt.idstation)
+    else if(e.idstation<a->idstation)
         a->fd= insertionABRp1(a->fd, e);
     else{
 		a->compteur=a->compteur +1;
-		a->elmt.val=a->elmt.val + e.val;
-		if(a->elmt.valmin > e.valmin)
-			a->elmt.valmin= e.valmin;
-		if(a->elmt.valmax < e.valmax)
-			a->elmt.valmax= e.valmax;
+		a->val=a->val + e.val;
+		a->var=a->var + e.var;
     }
     return a;
 }
@@ -2260,7 +2249,7 @@ ABRp1* insertionABRp1r(ABRp1* a, Donneep1 e){
 void parcoursInfixeABRp1(ABRp1* a, FILE* f){
     if(a!=NULL){
         parcoursInfixeABRp1(a->fg, f);
-    	fprintf(f, "%d;%lf;%lf;%lf\n",a->elmt.idstation,((a->elmt.val)/(a->compteur)) , a->elmt.valmin, a->elmt.valmax);
+    	fprintf(f, "%d;%lf;%lf\n",a->idstation,((a->val)/(a->compteur)) , ((a->var)/(a->compteur)));
         parcoursInfixeABRp1(a->fd, f);
 	}
 }
@@ -2275,16 +2264,13 @@ void supprabrp1( ABRp1* a){
 //fonction pour le mode p1
 int modep1(FILE* fe, char tab[], FILE* fo, int r){
 	int* h;
-    double moy;
     Donneep1 b;
 	Chainep1* a=NULL, *c;
 	ABRp1* a3=NULL;
 	Noeudp1* a2=NULL;
     //si le type de tri est un abr
     if(strcmp(tab,"tab")==0){
-        while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%lf;%lf;%d\n",&(b.date),&(b.heure),&(b.decalage),&(b.val),&(b.valmin),&(b.valmax),&(b.idstation)) != EOF){
-			b.valmin=b.val;
-			b.valmax=b.val;
+        while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%lf;%d\n",&(b.date),&(b.heure),&(b.decalage),&(b.val),&(b.var),&(b.idstation)) != EOF){
 			//on ajoute les elements un à un dans la chaine pointée par a
 			if(r==0)
 				a=ajouterCroissantp1(a, b);
@@ -2293,8 +2279,7 @@ int modep1(FILE* fe, char tab[], FILE* fo, int r){
         }
         while(a!=NULL){
             //on calcule la valeur moyenne pour chaque station
-            moy=(a->somme)/(a->compteur);
-            fprintf(fo, "%d;%lf;%lf;%lf\n",a->station, moy, a->min, a->max);//ecrire dans le fichier la ligne avec la station, temp min, max et moy(somme/compteur)
+            fprintf(fo, "%d;%lf;%lf\n",a->station, ((a->val)/(a->compteur)), ((a->var)/(a->compteur)));//ecrire dans le fichier la ligne avec la station, temp min, max et moy(somme/compteur)
             c=a;
             a=a->suivant;
             free(c);
@@ -2302,9 +2287,7 @@ int modep1(FILE* fe, char tab[], FILE* fo, int r){
         return 0;
     }
     else if(strcmp(tab,"avl")==0){
-        while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%lf;%lf;%d\n",&(b.date),&(b.heure),&(b.decalage),&(b.val),&(b.valmin),&(b.valmax),&(b.idstation)) != EOF){
-            b.valmin=b.val;
-			b.valmax=b.val;
+        while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%lf;%d\n",&(b.date),&(b.heure),&(b.decalage),&(b.val),&(b.var),&(b.idstation)) != EOF){
 			//on ajoute les elements un à un dans la chaine pointée par a
 			a2=insertp1(a2, b, h);
         }
@@ -2318,10 +2301,7 @@ int modep1(FILE* fe, char tab[], FILE* fo, int r){
         return 0;
     }
     else{
-        while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%lf;%lf;%d\n",&(b.date),&(b.heure),&(b.decalage),&(b.val),&(b.valmin),&(b.valmax),&(b.idstation)) != EOF){
-            //on verifie que la ligne est complete
-			b.valmin=b.val;
-			b.valmax=b.val;
+        while(fscanf(fe,"%dT%d:00:00+%d:00;%lf;%lf;%d\n",&(b.date),&(b.heure),&(b.decalage),&(b.val),&(b.var),&(b.idstation)) != EOF){
 			//on ajoute les elements un à un dans la chaine pointée par a
 			if(r==0)
 				a3=insertionABRp1(a3, b);
