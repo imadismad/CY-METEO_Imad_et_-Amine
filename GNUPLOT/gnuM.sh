@@ -1,15 +1,17 @@
-#Fichier de données 
+#fichier de données
 data_file="$1"
+echo -e "Gnuplot des données en cours:"
+
 
 #Titre et labels des axes
-title="Altitude en fonction de la zone géographique"
-xlabel="axe Est-Ouest"
+title="Humidité en fonction de la zone géographique"
+xlabel="axe Ouest-Est"
 ylabel="axe Sud-Nord"
 
-#nom fichier output
-graph="H.png"
+#Nom fichier sortie
+graph="M.png"
 
-# Creation du script gnuplot
+#Creation du script gnuplot
 gnuplot_script=$(cat <<EOF
 
 #preparation de la lecture du fichier delimité par ;
@@ -22,6 +24,7 @@ set title font "arial,18"
 #bord et legende
 set border 10
 set mytics 5
+set mxtics 5
 set key outside
 set tics out nomirror
 
@@ -30,13 +33,15 @@ set output '$graph'
 set title "$title"
 set xlabel "$xlabel"
 set ylabel "$ylabel"
+set zeroaxis linewidth 2 linetype 2
+
 
 #preparation carte interpolée
 set view map
 set dgrid3d
-set pm3d interpolate 9,9
+set pm3d interpolate 8,8
 
-splot "$data_file" using 3:2:4 with pm3d t "        Altitude en m"
+splot "$data_file" using 3:2:4 with pm3d t "              Humidité en %"
 
 EOF
 )
@@ -45,6 +50,4 @@ EOF
 echo "$gnuplot_script" | gnuplot
 
 # Ouvrir le graph créé
-
 xdg-open $graph
-
