@@ -96,8 +96,14 @@ int main(int argc, char *argv[]){
     }
 
     //vérifier le mode choisi, et s'il existe le faire et si il faut le faire dans le sens décroissant avec r
-    if(strcmp(mode,"t1")==0 || strcmp(mode,"p1")==0){    
+    if(strcmp(mode,"t1")==0){    
         a=mode1(fpe, tri,fpo, r); //rajouter le fichier de sortie
+        fclose(fpe);
+        fclose(fpo);
+        return a;
+    }
+    if(strcmp(mode,"p1")==0){    
+        a=modep1(fpe, tri,fpo, r); //rajouter le fichier de sortie
         fclose(fpe);
         fclose(fpo);
         return a;
